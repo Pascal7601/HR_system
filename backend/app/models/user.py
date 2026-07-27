@@ -16,7 +16,7 @@ class User(db.Model):
     role_id = db.Column(db.String(36), db.ForeignKey('roles.id'))
     role = db.relationship('Role', back_populates='users')
 
-    employee = db.relationship('Employee', back_populates='user', uselist=False, cascade='all, delete-orphan')
+    employee = db.relationship('Employee', back_populates='user', uselist=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

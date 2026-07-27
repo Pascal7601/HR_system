@@ -11,6 +11,9 @@ def create_app(config_name='dev'):
     db.init_app(app)
     migrate.init_app(app, db)
 
+    from app.api import register_blueprints
+    register_blueprints(app)
+
     @app.get('/health')
     def health_check():
         return {'status': 'ok'}, 200

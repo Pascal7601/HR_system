@@ -83,21 +83,16 @@ def update_employee(employee_id, data):
     return employee
 
 def delete_employee(employee_id):
-    """Deletes an employee and their associated user.
+    """
+    soft deletes an employee by setting their employment status to 'terminated'.
     Args:
         employee_id (str): The ID of the employee to delete.
     Returns:
         bool: True if deletion was successful, False otherwise.
     """
-    employee = Employee.query.filter_by(id=employee_id).first()
+    employee = get_employee_by_id(employee_id)
     if not employee:
         return False
-
-    # Delete the associated user
-    user = employee.user
-    db.session.delete(employee)
-    if user:
-        db.session.delete(user)
-
+    employee.employment_status = "terminated"
     db.session.commit()
     return True
