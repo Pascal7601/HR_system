@@ -10,6 +10,8 @@ class Leave(db.Model):
     name = db.Column(db.String(100), nullable=False)
     default_days_per_year = db.Column(db.Integer, nullable=False)
 
+    leave_requests = db.relationship('LeaveRequest', back_populates='leave_type')
+
 
     def __repr__(self):
         return f'<Leave {self.name}>'

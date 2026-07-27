@@ -6,6 +6,7 @@ class Employee(db.Model):
     __tablename__ = 'employees'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    staff_no = db.Column(db.String(20), unique=True, nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), nullable=True)
@@ -20,6 +21,10 @@ class Employee(db.Model):
     # Nullable: new hires may not be assigned to a department yet
     department_id = db.Column(db.String(36), db.ForeignKey('departments.id'), nullable=True)
     department = db.relationship('Department', back_populates='employees', foreign_keys=[department_id])
+
+    leave_requests = db.relationship('LeaveRequest', back_populates='employee', foreign_keys='LeaveRequest.employee_id')
+    reviewed_leave_requests = db.relationship('LeaveRequest', back_populates='reviewer', foreign_keys='LeaveRequest.reviewer_id')
+    payslips = db.relationship('Payslip', back_populates='employee')
 
     def __repr__(self):
         return f'<Employee {self.first_name} {self.last_name}>'
