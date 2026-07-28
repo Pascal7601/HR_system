@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from marshmallow import ValidationError
 
-from app.api.departments.schema import DepartmentSchema
+from backend.app.api.departments.schemas import DepartmentSchema
 from app.extensions import db
 from app.models import Department
 from app.utils.decorators import role_required

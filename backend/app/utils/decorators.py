@@ -11,6 +11,7 @@ def role_required(*allowed_roles):
         def wrapper(*args, **kwargs):
             verify_jwt_in_request()
             claims = get_jwt()
+            print("JWT Claims:", claims)  # Debugging line
             role = claims.get("role_name")
 
             if role not in allowed_roles:

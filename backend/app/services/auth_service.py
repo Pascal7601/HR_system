@@ -38,7 +38,7 @@ def authenticate_user(email, password):
     user = User.query.filter_by(email=email, is_active=True).first()
     if not user or not user.check_password(password):
         return None, "Invalid email or password"
-    return user, None
+    return user
 
 def get_user_by_id(user_id):
     return User.query.filter_by(id=user_id).first()

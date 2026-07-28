@@ -17,10 +17,18 @@ class LeaveReviewSchema(Schema):
 class LeaveRequestResponseSchema(Schema):
     id = fields.UUID()
     employee_id = fields.UUID()
+    employee_name = fields.Method("get_employee_name")
     leave_type_id = fields.UUID()
+    leave_type_name = fields.Method("get_leave_type_name")
     start_date = fields.Date()
     end_date = fields.Date()
     total_days = fields.Integer()
     reason = fields.String()
     status = fields.String()
     created_at = fields.DateTime()
+
+    def get_employee_name(self, obj):
+        return obj.employee.full_name if obj.employee else None
+
+    def get_leave_type_name(self, obj):
+        return obj.leave_type.name if obj.leave_type else None
