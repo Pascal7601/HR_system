@@ -44,7 +44,7 @@
         try {
           const data = await api.login(email, password);
           api.setSession(data);
-          window.location.href = "index.html";
+          window.location.href = "dashboard.html";
         } catch (err) {
           errorEl.textContent = err.message || "Invalid email or password.";
           errorEl.hidden = false;

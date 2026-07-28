@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HR System — Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="brand">HR System</span>
+      </div>
+      <div class="topbar-right">
+        <span id="user-name" class="user-name"></span>
+        <span id="user-role" class="role-badge"></span>
+        <button id="logout-btn" class="btn-ghost">Log out</button>
+      </div>
+    </header>
+
+    <div class="period-bar">
+      <label for="period-month">Period</label>
+      <select id="period-month"></select>
+      <select id="period-year"></select>
+
+      <!-- HR-only control, shown/hidden via JS -->
+      <button id="generate-payroll-btn" class="btn-primary" hidden>
+        Generate payroll for this period
+      </button>
+    </div>
+
+    <main class="dashboard-grid">
+      <!-- HR-only section -->
+      <section class="card" id="section-pending-approvals" hidden>
+        <h2>Pending approvals</h2>
+        <div class="card-body" data-state="loading">
+          <p class="state-loading">Loading pending requests…</p>
+        </div>
+      </section>
+
+      <!-- Shown to everyone (scoped differently per role in the fetch logic later) -->
+      <section class="card" id="section-whos-out">
+        <h2>Who's out / when</h2>
+        <div class="card-body" data-state="loading">
+          <p class="state-loading">Loading…</p>
+        </div>
+      </section>
+
+      <!-- Shown to everyone: HR sees org-wide, employee sees just their own -->
+      <section class="card" id="section-leave-balances">
+        <h2 id="leave-balances-title">Leave balances</h2>
+        <div class="card-body" data-state="loading">
+          <p class="state-loading">Loading…</p>
+        </div>
+        <!-- Employee-only control -->
+        <button id="request-leave-btn" class="btn-secondary" hidden>
+          Request leave
+        </button>
+      </section>
+
+      <!-- Shown to everyone: HR sees all employees' payslips, employee sees their own -->
+      <section class="card" id="section-payslips">
+        <h2 id="payslips-title">Payslips</h2>
+        <div class="card-body" data-state="loading">
+          <p class="state-loading">Loading…</p>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>
