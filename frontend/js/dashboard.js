@@ -1,4 +1,4 @@
-// ---- guard: redirect to login if no session ----
+// redirect to login if no session
 if (!api.isLoggedIn()) {
   window.location.href = "login.html";
 }
@@ -80,13 +80,136 @@ function applyRoleVisibility() {
 // ---- re-fetch data when period changes (wired up in later steps) ----
 function onPeriodChange() {
   const period = getSelectedPeriod();
-  console.log("Period changed to:", period);
-  // loadWhosOut(period), loadPayslips(period) etc. get called here in Step 6
+  loadWhosOut(period);
 }
 
 monthSelect.addEventListener("change", onPeriodChange);
 yearSelect.addEventListener("change", onPeriodChange);
 
-// ---- init ----
+// ---- Pending approvals (HR only) ----
+const pendingBody = document.querySelector(
+  "#section-pending-approvals .card-body",
+);
+
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function renderPendingApprovals(requests) {
+  if (requests.length === 0) {
+    pendingBody.innerHTML = `<p class="state-empty">No leave requests waiting for review.</p>`;
+    return;
+  }
+
+  pendingBody.innerHTML = "";
+  requests.forEach((req) => {
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `
+      <div class="list-row-main">
+        <span class="list-row-title">${req.employee_name || "Unknown employee"}</span>
+        <span class="list-row-sub">
+          ${req.leave_type_name || "Leave"} · ${formatDate(req.start_date)} – ${formatDate(req.end_date)}
+          · ${req.total_days} day${req.total_days === 1 ? "" : "s"}
+        </span>
+        ${req.reason ? `<span class="list-row-reason">"${req.reason}"</span>` : ""}
+      </div>
+      <div class="list-row-actions">
+        <button class="btn-approve" data-id="${req.id}">Approve</button>
+        <button class="btn-reject" data-id="${req.id}">Reject</button>
+      </div>
+    `;
+    pendingBody.appendChild(row);
+  });
+
+  pendingBody.querySelectorAll(".btn-approve").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      handleReview(btn.dataset.id, "approved", btn),
+    );
+  });
+  pendingBody.querySelectorAll(".btn-reject").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      handleReview(btn.dataset.id, "rejected", btn),
+    );
+  });
+}
+
+async function handleReview(requestId, status, btn) {
+  if (status === "rejected" && !confirm("Reject this leave request?")) return;
+
+  const row = btn.closest(".list-row");
+  row.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  btn.textContent = status === "approved" ? "Approving…" : "Rejecting…";
+
+  try {
+    await api.reviewLeaveRequest(requestId, status);
+    await loadPendingApprovals(); // refresh the list so the row disappears
+  } catch (err) {
+    alert(err.message || "Could not update this request. Try again.");
+    row.querySelectorAll("button").forEach((b) => (b.disabled = false));
+    btn.textContent = status === "approved" ? "Approve" : "Reject";
+  }
+}
+
+async function loadPendingApprovals() {
+  pendingBody.innerHTML = `<p class="state-loading">Loading pending requests…</p>`;
+  try {
+    const requests = await api.getPendingLeaveRequests();
+    renderPendingApprovals(requests);
+  } catch (err) {
+    pendingBody.innerHTML = `<p class="state-error">Couldn't load pending requests. ${err.message || ""}</p>`;
+  }
+}
+
+// ---- Who's out / when (everyone) ----
+const whosOutBody = document.querySelector("#section-whos-out .card-body");
+
+function renderWhosOut(requests) {
+  if (requests.length === 0) {
+    whosOutBody.innerHTML = `<p class="state-empty">No one is scheduled to be out this period.</p>`;
+    return;
+  }
+
+  whosOutBody.innerHTML = "";
+  requests.forEach((req) => {
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `
+      <div class="list-row-main">
+        <span class="list-row-title">${req.employee_name || "Unknown employee"}</span>
+        <span class="list-row-sub">
+          ${req.leave_type_name || "Leave"} · ${formatDate(req.start_date)} – ${formatDate(req.end_date)}
+          · ${req.total_days} day${req.total_days === 1 ? "" : "s"}
+        </span>
+      </div>
+    `;
+    whosOutBody.appendChild(row);
+  });
+}
+
+async function loadWhosOut(period) {
+  whosOutBody.innerHTML = `<p class="state-loading">Loading…</p>`;
+  try {
+    const requests = await api.getApprovedLeaveForPeriod(
+      period.month,
+      period.year,
+    );
+    console.log("requests", requests);
+    renderWhosOut(requests);
+  } catch (err) {
+    whosOutBody.innerHTML = `<p class="state-error">Couldn't load this data. ${err.message || ""}</p>`;
+  }
+}
+
+// init
 populatePeriodSelectors();
 applyRoleVisibility();
+loadWhosOut(getSelectedPeriod());
+
+if (isHR) {
+  loadPendingApprovals();
+}

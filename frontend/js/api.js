@@ -99,4 +99,8 @@ const api = {
       body: JSON.stringify(payload),
     });
   },
+  // Fetch approved leave requests for a specific month and year
+  getApprovedLeaveForPeriod(month, year) {
+    return api.request(`/leave/approved?month=${month}&year=${year}`);
+  },
 };
