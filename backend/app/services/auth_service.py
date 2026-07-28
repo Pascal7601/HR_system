@@ -1,5 +1,3 @@
-import email
-
 from app.extensions import db
 from app.models import User, Role
 
@@ -38,7 +36,7 @@ def authenticate_user(email, password):
     user = User.query.filter_by(email=email, is_active=True).first()
     if not user or not user.check_password(password):
         return None, "Invalid email or password"
-    return user
+    return user, None
 
 def get_user_by_id(user_id):
     return User.query.filter_by(id=user_id).first()

@@ -1,0 +1,26 @@
+# base URL for the API
+@base=http://localhost:5000/api
+@access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc4NTIzMjEzMiwianRpIjoiMzM0MzQ1MDQtZjdkZi00M2I2LWJjODctZmM1NWY3MjU5NDE0IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjI2ZjdmYzBmLTY4YTAtNDNhYy05MGYyLWVjODI0ZWFjNWZhZSIsIm5iZiI6MTc4NTIzMjEzMiwiY3NyZiI6IjYwYWVlNTUxLWVjZGYtNGIwOC1iNmFhLTZhNjcyZDM0OTc2OSIsImV4cCI6MTc4NTIzNTczMiwicm9sZV9uYW1lIjoiZW1wbG95ZWUifQ.c1HhgFiuhht1ZDur9W3STZEdx5ZuehKK5VbSvbubZLE
+
+
+### Auth
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@hrsystem.com",
+  "password": "EmployeePass123!"
+}
+
+### POST Leave
+POST {{base}}/leave
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+    "employee_id": "3447da34-044b-495a-896a-e5a47eff98aa",
+    "reason": "Family vacation",
+    "leave_type_id": "4641ac8a-961a-447f-9957-294acf906dcd",
+    "start_date": "2023-10-01",
+    "end_date": "2023-10-05"
+}

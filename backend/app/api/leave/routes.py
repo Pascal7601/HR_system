@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
-from app.api.leave.schema import (
+from app.api.leave.schemas import (
     LeaveRequestCreateSchema,
     LeaveReviewSchema,
     LeaveRequestResponseSchema,
@@ -27,9 +27,9 @@ def apply_for_leave():
         return jsonify({"errors": err.messages}), 422
 
     user_id = get_jwt_identity()
-    leave_request, error = leave_service.create_leave_request(user_id, data)
-    if error:
-        return jsonify({"message": error}), 400
+    leave_request = leave_service.create_leave_request(user_id, data)
+    if not leave_request:
+        return jsonify({"message": "Failed to create leave request"}), 400
 
     return jsonify(response_schema.dump(leave_request)), 201
 
@@ -45,7 +45,7 @@ def my_leave_requests():
 @leave_bp.get("/pending")
 @role_required("admin", "hr_manager")
 def pending_requests():
-    requests_ = leave_service.get_pending_requests()
+    requests_ = leave_service.get_pending_leave_requests()
     return jsonify(response_list_schema.dump(requests_)), 200
 
 
@@ -58,10 +58,11 @@ def review_leave(request_id):
         return jsonify({"errors": err.messages}), 422
 
     reviewer_id = get_jwt_identity()
-    leave_request, error = leave_service.review_leave_request(
+    print(f"Reviewer ID: {reviewer_id}, Request ID: {request_id}, Action: {data['status']}")  # Debugging line
+    leave_request = leave_service.review_leave_request(
         request_id, data["status"], reviewer_id
     )
-    if error:
-        return jsonify({"message": error}), 404
+    if not leave_request:
+        return jsonify({"message": "Leave request not found"}), 404
 
     return jsonify(response_schema.dump(leave_request)), 200

@@ -28,7 +28,7 @@ class LeaveRequestResponseSchema(Schema):
     created_at = fields.DateTime()
 
     def get_employee_name(self, obj):
-        return obj.employee.full_name if obj.employee else None
+        return obj.employee.first_name + " " + obj.employee.last_name if obj.employee else None
 
     def get_leave_type_name(self, obj):
         return obj.leave_type.name if obj.leave_type else None

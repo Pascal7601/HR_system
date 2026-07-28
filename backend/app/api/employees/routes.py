@@ -1,7 +1,7 @@
 from flask import jsonify, request, Blueprint
 from app.models import Employee
 from marshmallow import ValidationError
-from app.api.employees.schema import (
+from app.api.employees.schemas import (
     EmployeeCreateSchema,
     EmployeeUpdateSchema,
     EmployeeResponseSchema

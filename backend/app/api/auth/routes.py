@@ -35,12 +35,12 @@ def login():
     except ValidationError as err:
         return jsonify(err.messages), 400
 
-    user = auth_service.authenticate_user(data['email'], data['password'])
-    if not user:
-        return jsonify({"message": "Invalid email or password"}), 401
+    user, error = auth_service.authenticate_user(data['email'], data['password'])
+    if error or not user:
+        return jsonify({"message": error or "Invalid email or password"}), 401
 
-    access_token = create_access_token(identity=user.id, additional_claims={"role_name": user.role.name})
-    refresh_token = create_refresh_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id), additional_claims={"role_name": user.role.name})
+    refresh_token = create_refresh_token(identity=str(user.id))
 
     return jsonify({
         "access_token": access_token,

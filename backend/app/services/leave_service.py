@@ -21,7 +21,7 @@ def create_leave_request(user_id, data):
 
     leave_request = LeaveRequest(
         employee_id=employee.id,
-        leave_type_id=data["leave_type_id"],
+        leave_type_id=str(data["leave_type_id"]),
         start_date=data["start_date"],
         end_date=data["end_date"],
         reason=data.get("reason", "")
@@ -50,25 +50,25 @@ def get_pending_leave_requests():
     """
     return LeaveRequest.query.filter_by(status='pending').order_by(LeaveRequest.created_at.asc()).all()
 
-def review_leave_request(request_id, reviewer_id, action):
+def review_leave_request(request_id, action, reviewer_id):
     """Reviews a leave request by approving or rejecting it.
     Args:
         request_id (int): The ID of the leave request to be reviewed.
-        reviewer_id (int): The ID of the user reviewing the leave request.
         action (str): The action to take ('approve' or 'reject').
+        reviewer_id (int): The ID of the user reviewing the leave request.
     Returns:
         LeaveRequest: The updated leave request.
     """
-    leave_request = LeaveRequest.query.get(request_id)
+    leave_request = LeaveRequest.query.get(str(request_id))
     if not leave_request:
         raise ValueError("Leave request not found.")
 
-    if action == 'approve':
+    if action == 'approved':
         leave_request.status = 'approved'
-    elif action == 'reject':
+    elif action == 'rejected':
         leave_request.status = 'rejected'
     else:
-        raise ValueError("Invalid action. Please specify 'approve' or 'reject'.")
+        raise ValueError("Invalid action. Please specify 'approved' or 'rejected'.")
     leave_request.reviewer_id = reviewer_id
 
     db.session.commit()

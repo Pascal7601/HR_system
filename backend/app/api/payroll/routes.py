@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
-from app.api.payroll.schema import PayslipGenerateSchema, PayslipResponseSchema
+from app.api.payroll.schemas import PayslipGenerateSchema, PayslipResponseSchema
 from app.services import payroll_service
 from app.utils.decorators import role_required
 
