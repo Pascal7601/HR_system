@@ -60,7 +60,12 @@
 
       <!-- Shown to everyone: HR sees all employees' payslips, employee sees their own -->
       <section class="card" id="section-payslips">
-        <h2 id="payslips-title">Payslips</h2>
+        <div class="card-header">
+          <h2 id="payslips-title">Payslips</h2>
+          <button id="export-payslips-btn" class="btn-ghost" hidden>
+            Export to Excel
+          </button>
+        </div>
         <div class="card-body" data-state="loading">
           <p class="state-loading">Loading…</p>
         </div>

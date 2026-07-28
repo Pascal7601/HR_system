@@ -81,6 +81,7 @@ function applyRoleVisibility() {
 function onPeriodChange() {
   const period = getSelectedPeriod();
   loadWhosOut(period);
+  loadPayslips(period);
 }
 
 monthSelect.addEventListener("change", onPeriodChange);
@@ -205,10 +206,176 @@ async function loadWhosOut(period) {
   }
 }
 
+// ---- Leave balances (everyone, scoped by role) ----
+const balancesBody = document.querySelector(
+  "#section-leave-balances .card-body",
+);
+
+function renderBalanceRows(balances) {
+  if (balances.length === 0) {
+    return `<p class="state-empty">No leave types configured yet.</p>`;
+  }
+  return balances
+    .map(
+      (b) => `
+    <div class="list-row">
+      <div class="list-row-main">
+        <span class="list-row-title">${b.leave_type_name}</span>
+        <span class="list-row-sub">${b.used_days} used of ${b.default_days_per_year}</span>
+      </div>
+      <span class="balance-pill">${b.remaining_days} left</span>
+    </div>
+  `,
+    )
+    .join("");
+}
+
+function renderMyBalances(balances) {
+  balancesBody.innerHTML = renderBalanceRows(balances);
+}
+
+function renderAllBalances(employeeBalances) {
+  if (employeeBalances.length === 0) {
+    balancesBody.innerHTML = `<p class="state-empty">No active employees found.</p>`;
+    return;
+  }
+  balancesBody.innerHTML = employeeBalances
+    .map(
+      (emp) => `
+    <div class="balance-group">
+      <h3 class="balance-group-title">${emp.employee_name}</h3>
+      ${renderBalanceRows(emp.balances)}
+    </div>
+  `,
+    )
+    .join("");
+}
+
+async function loadLeaveBalances() {
+  balancesBody.innerHTML = `<p class="state-loading">Loading…</p>`;
+  const year = new Date().getFullYear();
+  try {
+    if (isHR) {
+      const data = await api.getAllLeaveBalances(year);
+      renderAllBalances(data);
+    } else {
+      const data = await api.getMyLeaveBalances(year);
+      renderMyBalances(data);
+    }
+  } catch (err) {
+    balancesBody.innerHTML = `<p class="state-error">Couldn't load leave balances. ${err.message || ""}</p>`;
+  }
+}
+
+// ---- Payslips for selected period ----
+const payslipsBody = document.querySelector("#section-payslips .card-body");
+
+function formatCurrency(value) {
+  return `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+}
+
+function renderPayslips(payslips, showEmployeeName) {
+  if (payslips.length === 0) {
+    payslipsBody.innerHTML = `<p class="state-empty">No payslips generated for this period yet.</p>`;
+    return;
+  }
+
+  payslipsBody.innerHTML = payslips
+    .map(
+      (p) => `
+    <div class="list-row">
+      <div class="list-row-main">
+        <span class="list-row-title">${showEmployeeName ? p.employee_name : "Net pay"}</span>
+        <span class="list-row-sub">
+          Gross ${formatCurrency(p.gross_pay)} · Tax ${formatCurrency(p.tax_amount)}
+          · SS ${formatCurrency(p.social_security_amount)} · ${p.paid_days}/${p.working_days_in_period} days paid
+        </span>
+      </div>
+      <span class="balance-pill">${formatCurrency(p.net_pay)}</span>
+    </div>
+  `,
+    )
+    .join("");
+}
+
+async function loadPayslips(period) {
+  payslipsBody.innerHTML = `<p class="state-loading">Loading…</p>`;
+  try {
+    if (isHR) {
+      const payslips = await api.getAllPayslipsForPeriod(
+        period.month,
+        period.year,
+      );
+      renderPayslips(payslips, true);
+    } else {
+      const payslips = await api.getMyPayslipsForPeriod(
+        period.month,
+        period.year,
+      );
+      renderPayslips(payslips, false);
+    }
+  } catch (err) {
+    payslipsBody.innerHTML = `<p class="state-error">Couldn't load payslips. ${err.message || ""}</p>`;
+  }
+}
+
+// ---- Generate payroll button (HR only) ----
+const generateBtn = document.getElementById("generate-payroll-btn");
+
+generateBtn.addEventListener("click", async () => {
+  const period = getSelectedPeriod();
+  const monthName = MONTH_NAMES[period.month - 1];
+
+  if (
+    !confirm(
+      `Generate payroll for ${monthName} ${period.year} for all active employees?`,
+    )
+  )
+    return;
+
+  generateBtn.disabled = true;
+  generateBtn.textContent = "Generating…";
+
+  try {
+    const result = await api.generatePayrollBatch(period.month, period.year);
+    alert(
+      `Done. Generated ${result.created.length} payslip(s).` +
+        (result.skipped.length
+          ? ` Skipped ${result.skipped.length} (already existed).`
+          : ""),
+    );
+    await loadPayslips(period);
+  } catch (err) {
+    alert(err.message || "Payroll generation failed.");
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = "Generate payroll for this period";
+  }
+});
+
+const exportBtn = document.getElementById("export-payslips-btn");
+exportBtn.hidden = !isHR;
+
+exportBtn.addEventListener("click", async () => {
+  const period = getSelectedPeriod();
+  exportBtn.disabled = true;
+  exportBtn.textContent = "Exporting…";
+  try {
+    await api.downloadPayslipsExcel(period.month, period.year);
+  } catch (err) {
+    alert(err.message || "Export failed.");
+  } finally {
+    exportBtn.disabled = false;
+    exportBtn.textContent = "Export to Excel";
+  }
+});
+
 // init
 populatePeriodSelectors();
 applyRoleVisibility();
 loadWhosOut(getSelectedPeriod());
+loadLeaveBalances();
+loadPayslips(getSelectedPeriod());
 
 if (isHR) {
   loadPendingApprovals();

@@ -103,4 +103,47 @@ const api = {
   getApprovedLeaveForPeriod(month, year) {
     return api.request(`/leave/approved?month=${month}&year=${year}`);
   },
+
+  getMyLeaveBalances(year) {
+    return api.request(`/leave/balances/my?year=${year}`);
+  },
+  getAllLeaveBalances(year) {
+    return api.request(`/leave/balances?year=${year}`);
+  },
+
+  getAllPayslipsForPeriod(month, year) {
+    return api.request(`/payroll/period?month=${month}&year=${year}`);
+  },
+  getMyPayslipsForPeriod(month, year) {
+    return api.request(`/payroll/my?month=${month}&year=${year}`);
+  },
+  generatePayrollBatch(month, year) {
+    return api.request("/payroll/generate-batch", {
+      method: "POST",
+      body: JSON.stringify({ period_month: month, period_year: year }),
+    });
+  },
+
+  async downloadPayslipsExcel(month, year) {
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(
+      `${API_BASE}/payroll/export?month=${month}&year=${year}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.message || "Export failed.");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `payroll_${year}_${String(month).padStart(2, "0")}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };

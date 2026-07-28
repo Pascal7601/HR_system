@@ -309,3 +309,38 @@ body {
   font-size: 0.85rem;
   padding: 1rem 0;
 }
+
+.balance-pill {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.balance-group {
+  margin-bottom: 1.25rem;
+}
+.balance-group:last-child {
+  margin-bottom: 0;
+}
+
+.balance-group-title {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0 0 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.card-header h2 {
+  margin: 0;
+}

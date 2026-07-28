@@ -8,8 +8,9 @@ class PayslipGenerateSchema(Schema):
 
 
 class PayslipResponseSchema(Schema):
-    id = fields.UUID()
-    employee_id = fields.UUID()
+    id = fields.String()
+    employee_id = fields.String()
+    employee_name = fields.Method("get_employee_name")
     period_month = fields.Integer()
     period_year = fields.Integer()
     working_days_in_period = fields.Integer()
@@ -20,3 +21,6 @@ class PayslipResponseSchema(Schema):
     net_pay = fields.Decimal(as_string=True)
     status = fields.String()
     generated_at = fields.DateTime()
+
+    def get_employee_name(self, obj):
+        return obj.employee.first_name + " " + obj.employee.last_name if obj.employee else None
