@@ -9,6 +9,8 @@ from app.api.leave.schemas import (
 )
 from app.services import leave_service
 from app.utils.decorators import role_required
+from app.models import Employee
+from datetime import datetime
 
 leave_bp = Blueprint("leave", __name__)
 
@@ -66,3 +68,34 @@ def review_leave(request_id):
         return jsonify({"message": "Leave request not found"}), 404
 
     return jsonify(response_schema.dump(leave_request)), 200
+
+@leave_bp.get("/approved")
+@jwt_required()
+def approved_leave_for_period():
+    month = request.args.get("month", type=int)
+    year = request.args.get("year", type=int)
+    if not month or not year:
+        return jsonify({"message": "month and year query params are required"}), 422
+
+    requests_ = leave_service.get_approved_leave_for_period(month, year)
+    return jsonify(response_list_schema.dump(requests_)), 200
+
+@leave_bp.get("/balances/my")
+@jwt_required()
+def my_leave_balances():
+    user_id = get_jwt_identity()
+    employee = Employee.query.filter_by(user_id=user_id).first()
+    if not employee:
+        return jsonify({"message": "Employee profile not found"}), 404
+
+    year = request.args.get("year", type=int, default=datetime.utcnow().year)
+    balances = leave_service.get_leave_balances(employee.id, year)
+    return jsonify(balances), 200
+
+
+@leave_bp.get("/balances")
+@role_required("admin", "hr_manager")
+def all_leave_balances():
+    year = request.args.get("year", type=int, default=datetime.utcnow().year)
+    balances = leave_service.get_leave_balances_for_all_employees(year)
+    return jsonify(balances), 200

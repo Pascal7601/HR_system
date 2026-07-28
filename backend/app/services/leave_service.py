@@ -1,5 +1,8 @@
 from app.extensions import db
 from app.models import  Employee, LeaveRequest
+from calendar import monthrange
+from datetime import date
+from app.models import Leave
 
 def _get_employee_for_user(user_id):
     return Employee.query.filter_by(user_id=user_id).first()
@@ -73,3 +76,57 @@ def review_leave_request(request_id, action, reviewer_id):
 
     db.session.commit()
     return leave_request
+
+def get_approved_leave_for_period(month, year):
+    """Retrieves all approved leave requests for a specific month and year.
+    Args:
+        month (int): The month for which to retrieve approved leave requests.
+        year (int): The year for which to retrieve approved leave requests.
+    Returns:
+        list: A list of approved leave requests for the specified period.
+    """
+    period_start = date(year, month, 1)
+    period_end = date(year, month, monthrange(year, month)[1])
+
+    return LeaveRequest.query.filter(
+        LeaveRequest.status == "approved",
+        LeaveRequest.start_date <= period_end,
+        LeaveRequest.end_date >= period_start,
+    ).order_by(LeaveRequest.start_date.asc()).all()
+
+
+def get_leave_balances(employee_id, year):
+    leave_types = Leave.query.all()
+    approved_requests = LeaveRequest.query.filter(
+        LeaveRequest.employee_id == employee_id,
+        LeaveRequest.status == "approved",
+        db.extract("year", LeaveRequest.start_date) == year,
+    ).all()
+
+    used_by_type = {}
+    for req in approved_requests:
+        used_by_type[req.leave_type_id] = used_by_type.get(req.leave_type_id, 0) + req.duration
+
+    balances = []
+    for lt in leave_types:
+        used = used_by_type.get(lt.id, 0)
+        balances.append({
+            "leave_type_id": lt.id,
+            "leave_type_name": lt.name,
+            "default_days_per_year": lt.default_days_per_year,
+            "used_days": used,
+            "remaining_days": max(lt.default_days_per_year - used, 0),
+        })
+    return balances
+
+
+def get_leave_balances_for_all_employees(year):
+    employees = Employee.query.filter_by(employment_status="active").all()
+    return [
+        {
+            "employee_id": emp.id,
+            "employee_name": emp.first_name + " " + emp.last_name,
+            "balances": get_leave_balances(emp.id, year),
+        }
+        for emp in employees
+    ]
