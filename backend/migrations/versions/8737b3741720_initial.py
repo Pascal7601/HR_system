@@ -1,8 +1,8 @@
-"""Initial migration
+"""initial
 
-Revision ID: e653309333d2
+Revision ID: 8737b3741720
 Revises: 
-Create Date: 2026-07-27 15:42:34.532551
+Create Date: 2026-07-28 20:24:00.175831
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'e653309333d2'
+revision = '8737b3741720'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -30,6 +30,7 @@ def upgrade():
     )
     op.create_table('employees',
     sa.Column('id', sa.String(length=36), nullable=False),
+    sa.Column('staff_no', sa.String(length=20), nullable=False),
     sa.Column('first_name', sa.String(length=100), nullable=False),
     sa.Column('last_name', sa.String(length=100), nullable=False),
     sa.Column('phone_number', sa.String(length=20), nullable=True),
@@ -37,11 +38,14 @@ def upgrade():
     sa.Column('job_title', sa.String(length=100), nullable=True),
     sa.Column('salary', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('employment_status', sa.String(length=50), nullable=True),
+    sa.Column('manager_id', sa.String(length=36), nullable=True),
     sa.Column('user_id', sa.String(length=36), nullable=False),
     sa.Column('department_id', sa.String(length=36), nullable=True),
     sa.ForeignKeyConstraint(['department_id'], ['departments.id'], ),
+    sa.ForeignKeyConstraint(['manager_id'], ['employees.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('staff_no'),
     sa.UniqueConstraint('user_id')
     )
     op.create_table('leave_types',

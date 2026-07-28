@@ -54,8 +54,10 @@ def create_employee(data):
         hire_date=data.get("hire_date"),
         job_title=data.get("job_title"),
         salary=data.get("salary"),
+        employment_type=data.get("employment_type", "full_time"),
         employment_status=data.get("employment_status", "active"),
         user_id=user.id,
+        manager_id=data.get("manager_id"),
         department_id=data.get("department_id")
     )
     db.session.add(employee)

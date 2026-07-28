@@ -1,6 +1,93 @@
 from decimal import Decimal
-from app.models import Employee, Payslip
+from app.models import Employee, Payslip, Leave, LeaveRequest
 from app.extensions import db
+
+from decimal import Decimal, ROUND_HALF_UP
+from datetime import date, timedelta
+import calendar
+
+# ---------------------------------------------------------------------------
+# ASSUMPTIONS (documented, not meant to match any real country's tax code):
+
+# - Working days = Mon-Fri in the calendar month. Holidays are not excluded.
+# - An employee is only paid from their hire_date onward if they joined
+#   mid-period; weekdays before that date are not counted as "days owed."
+# - Only leave of type "unpaid" reduces pay. Approved leave of any other
+#   type (annual, sick) does NOT reduce paid_days.
+# - Tax is calculated MARGINALLY: each bracket's rate applies only to the
+#   slice of income within it, not the whole salary at one flat rate.
+#
+#   Monthly tax brackets (illustrative, not a real jurisdiction's rates):
+#     0    - 30000   -> 0%
+#     30000 - 100000   -> 10%
+#     100000+         -> 20%
+#
+# - Social security = flat 5% of gross pay, capped at 500.
+# - net_pay = gross_pay - tax - social_security
+# ---------------------------------------------------------------------------
+
+TAX_BRACKETS = [
+    (Decimal("0"), Decimal("30000"), Decimal("0.00")),
+    (Decimal("30000"), Decimal("100000"), Decimal("0.10")),
+    (Decimal("100000"), None, Decimal("0.20")),  # None = no upper bound
+]
+
+SOCIAL_SECURITY_RATE = Decimal("0.05")
+SOCIAL_SECURITY_CAP = Decimal("500")
+
+
+def _round_money(value):
+    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+def apply_marginal_brackets(taxable_income):
+    """Marginal tax calculation: each bracket's rate applies only to the
+    slice of income that falls within that bracket, not the whole amount."""
+    if taxable_income <= 0:
+        return Decimal("0.00")
+
+    tax = Decimal("0")
+    for lower, upper, rate in TAX_BRACKETS:
+        if taxable_income <= lower:
+            break
+        slice_top = taxable_income if upper is None else min(taxable_income, upper)
+        taxable_slice = slice_top - lower
+        if taxable_slice > 0:
+            tax += taxable_slice * rate
+    return _round_money(tax)
+
+def _count_weekdays(start_date, end_date):
+    """Count Mon-Fri days in [start_date, end_date], inclusive. Returns 0
+    if start_date is after end_date (e.g. employee hired after this period)."""
+    if start_date > end_date:
+        return 0
+    return sum(
+        1
+        for offset in range((end_date - start_date).days + 1)
+        if (start_date + timedelta(days=offset)).weekday() < 5
+    )
+
+def _unpaid_leave_weekdays(employee_id, period_start, period_end):
+    """Sum weekdays covered by approved 'unpaid' leave requests that overlap
+    this period, clipped to the period's bounds."""
+    unpaid_type = Leave.query.filter_by(name="unpaid").first()
+    if not unpaid_type:
+        return 0
+
+    overlapping = LeaveRequest.query.filter(
+        LeaveRequest.employee_id == employee_id,
+        LeaveRequest.leave_type_id == unpaid_type.id,
+        LeaveRequest.status == "approved",
+        LeaveRequest.start_date <= period_end,
+        LeaveRequest.end_date >= period_start,
+    ).all()
+
+    total = 0
+    for req in overlapping:
+        clipped_start = max(req.start_date, period_start)
+        clipped_end = min(req.end_date, period_end)
+        total += _count_weekdays(clipped_start, clipped_end)
+    return total
+
 
 def generate_payslip(data):
     """
@@ -11,33 +98,54 @@ def generate_payslip(data):
         Payslip: The generated payslip object.
 
     """
-    employee = Employee.query.filter_by(id=data["employee_id"]).first()
+    employee = Employee.query.get(str(data["employee_id"]))
     if not employee:
-        raise ValueError("Employee not found")
+        return None, "Employee not found"
+
+    month = data["period_month"]
+    year = data["period_year"]
 
     existing = Payslip.query.filter_by(
-        employee_id=employee.id,
-        period_month=data["period_month"],
-        period_year=data["period_year"]
-        ).first()
+        employee_id=employee.id, period_month=month, period_year=year
+    ).first()
     if existing:
-        raise ValueError("Payslip already exists for this period")
+        return None, "Payslip already generated for this period"
 
-    # Assuming a standard of 22 working days in a month for simplicity
-    working_days_in_period = 22
-    paid_days = Decimal(str(working_days_in_period))
+    period_start = date(year, month, 1)
+    period_end = date(year, month, calendar.monthrange(year, month)[1])
+
+    working_days_in_period = _count_weekdays(period_start, period_end)
+    if working_days_in_period == 0:
+        return None, "Selected period has no working days"
+
+    # Mid-month joiner: only count from hire_date onward, if it falls in this period
+    effective_start = period_start
+    if employee.hire_date and employee.hire_date > period_start:
+        effective_start = employee.hire_date
+
+    if effective_start > period_end:
+        return None, "Employee's hire date is after this period; nothing to pay"
+
+    days_present = _count_weekdays(effective_start, period_end)
+    unpaid_days = _unpaid_leave_weekdays(employee.id, effective_start, period_end)
+
+    paid_days = max(days_present - unpaid_days, 0)
+
     basic_salary = employee.salary or Decimal("0")
+    gross_pay = _round_money(
+        basic_salary * Decimal(paid_days) / Decimal(working_days_in_period)
+    )
 
-    # Calculate gross pay, tax, social security, and net pay
-    gross_pay = basic_salary * (paid_days / working_days_in_period)
-    tax_amount = Decimal("0")
-    social_security_amount = min(gross_pay * Decimal("0.05"), Decimal("500"))
+    tax_amount = apply_marginal_brackets(gross_pay)
+    social_security_amount = _round_money(
+        min(gross_pay * SOCIAL_SECURITY_RATE, SOCIAL_SECURITY_CAP)
+    )
     net_pay = gross_pay - tax_amount - social_security_amount
 
     payslip = Payslip(
         employee_id=employee.id,
-        period_month=data["period_month"],
-        period_year=data["period_year"],
+        period_month=month,
+        period_year=year,
         working_days_in_period=working_days_in_period,
         paid_days=paid_days,
         gross_pay=gross_pay,
@@ -46,10 +154,10 @@ def generate_payslip(data):
         net_pay=net_pay,
         status="finalized",
     )
-
     db.session.add(payslip)
     db.session.commit()
     return payslip
+    
 
 def get_payslips_for_employee(employee_id, month=None, year=None):
     """
