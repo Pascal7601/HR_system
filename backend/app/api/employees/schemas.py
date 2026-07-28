@@ -2,7 +2,7 @@ from marshmallow import Schema, fields, validate
 
 
 class EmployeeCreateSchema(Schema):
-    employee_code = fields.String(required=True)
+    staff_no = fields.String(required=True)
     first_name = fields.String(required=True)
     last_name = fields.String(required=True)
     phone_number = fields.String(load_default=None)
@@ -39,7 +39,7 @@ class EmployeeUpdateSchema(Schema):
 
 class EmployeeResponseSchema(Schema):
     id = fields.String()
-    employee_code = fields.String()
+    staff_no = fields.String()
     full_name = fields.String()
     job_title = fields.String()
     employment_status = fields.String()

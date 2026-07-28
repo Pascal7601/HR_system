@@ -19,6 +19,9 @@ def list_employees(page=1, per_page=20, department_id=None):
 def get_employee_by_id(employee_id):
     return Employee.query.filter_by(id=employee_id).first()
 
+def get_employee_by_user_id(user_id):
+    return Employee.query.filter_by(user_id=user_id).first()
+
 def create_employee(data):
     """Creates a new employee and associated user.
     Args:
@@ -98,3 +101,26 @@ def delete_employee(employee_id):
     employee.employment_status = "terminated"
     db.session.commit()
     return True
+
+def _build_org_node(employee):
+    return {
+        "id": employee.id,
+        "full_name": employee.full_name,
+        "job_title": employee.job_title,
+        "department_name": employee.department.name if employee.department else None,
+        "direct_reports": [
+            _build_org_node(report)
+            for report in employee.direct_reports
+            if report.employment_status == "active"
+        ],
+    }
+
+
+def get_org_chart():
+    """Returns a forest (list of trees) rooted at every employee who has no
+    manager -- typically just the CEO/founder, but supports multiple roots
+    in case of a flat structure with several independent leads."""
+    top_level = Employee.query.filter_by(
+        manager_id=None, employment_status="active"
+    ).all()
+    return [_build_org_node(emp) for emp in top_level]

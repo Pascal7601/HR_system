@@ -9,7 +9,7 @@
   <body>
     <header class="topbar">
       <div class="topbar-left">
-        <span class="brand">HR System</span>
+        <span class="brand">Vunoh Global HR</span>
       </div>
       <div class="topbar-right">
         <span id="user-name" class="user-name"></span>
@@ -30,7 +30,17 @@
     </div>
 
     <main class="dashboard-grid">
-      <!-- HR-only section -->
+      <!-- NEW: Employee Profile Section -->
+      <section class="card card-full-width" id="section-profile">
+        <div class="card-header">
+          <h2>My Profile</h2>
+        </div>
+        <div class="card-body" id="profile-body" data-state="loading">
+          <p class="state-loading">Loading profile details…</p>
+        </div>
+      </section>
+
+      <!-- HR / Dept Manager section -->
       <section class="card" id="section-pending-approvals" hidden>
         <h2>Pending approvals</h2>
         <div class="card-body" data-state="loading">
@@ -38,7 +48,7 @@
         </div>
       </section>
 
-      <!-- Shown to everyone (scoped differently per role in the fetch logic later) -->
+      <!-- Shown to everyone -->
       <section class="card" id="section-whos-out">
         <h2>Who's out / when</h2>
         <div class="card-body" data-state="loading">
@@ -46,7 +56,7 @@
         </div>
       </section>
 
-      <!-- Shown to everyone: HR sees org-wide, employee sees just their own -->
+      <!-- Shown to everyone -->
       <section class="card" id="section-leave-balances">
         <h2 id="leave-balances-title">Leave balances</h2>
         <div class="card-body" data-state="loading">
@@ -58,7 +68,7 @@
         </button>
       </section>
 
-      <!-- Shown to everyone: HR sees all employees' payslips, employee sees their own -->
+      <!-- Shown to everyone -->
       <section class="card" id="section-payslips">
         <div class="card-header">
           <h2 id="payslips-title">Payslips</h2>
@@ -70,6 +80,41 @@
           <p class="state-loading">Loading…</p>
         </div>
       </section>
+
+      <div id="leave-modal-overlay" class="modal-overlay" hidden>
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="leave-modal-title"
+        >
+          <h2 id="leave-modal-title">Request leave</h2>
+          <form id="leave-request-form">
+            <label for="leave-type-select">Leave type</label>
+            <select id="leave-type-select" required></select>
+
+            <label for="leave-start-date">Start date</label>
+            <input type="date" id="leave-start-date" required />
+
+            <label for="leave-end-date">End date</label>
+            <input type="date" id="leave-end-date" required />
+
+            <label for="leave-reason">Reason (optional)</label>
+            <textarea id="leave-reason" rows="3"></textarea>
+
+            <p id="leave-form-error" class="state-error" hidden></p>
+
+            <div class="modal-actions">
+              <button type="button" id="leave-cancel-btn" class="btn-secondary">
+                Cancel
+              </button>
+              <button type="submit" id="leave-submit-btn" class="btn-primary">
+                Submit request
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </main>
 
     <script src="js/api.js"></script>

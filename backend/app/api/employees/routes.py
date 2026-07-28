@@ -8,6 +8,7 @@ from app.api.employees.schemas import (
 )
 from app.services import emp_service
 from app.utils.decorators import role_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 employee_bp = Blueprint('employee', __name__)
 
@@ -75,3 +76,19 @@ def delete_employee(employee_id):
     if not success:
         return jsonify({"message": error}), 400
     return jsonify({"message": "Employee status updated to 'terminated'"}), 200
+
+@employee_bp.get("/org-chart")
+@role_required("admin", "hr_manager", "employee")
+def org_chart():
+    return jsonify(emp_service.get_org_chart()), 200
+
+@employee_bp.get("/me")
+@jwt_required()
+def my_profile():
+    user_id = get_jwt_identity()
+    print('user id', user_id)
+    employee = emp_service.get_employee_by_user_id(user_id)
+    print('employeee', employee)
+    if not employee:
+        return jsonify({"message": "Employee profile not found"}), 404
+    return jsonify(response_schema.dump(employee)), 200

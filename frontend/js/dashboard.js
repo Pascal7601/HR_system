@@ -63,10 +63,21 @@ function getSelectedPeriod() {
 }
 
 // ---- role-based visibility ----
+
+const isAdmin = user && user.role === "admin";
+const isManager =
+  user && ["admin", "hr_manager", "dept_manager"].includes(user.role);
+
 function applyRoleVisibility() {
   document.getElementById("section-pending-approvals").hidden = !isHR;
   document.getElementById("generate-payroll-btn").hidden = !isHR;
   document.getElementById("request-leave-btn").hidden = isHR;
+
+  // who's out — admin + managers, not plain employees
+  document.getElementById("section-whos-out").hidden = !isManager;
+
+  // payslips — admin only
+  document.getElementById("section-payslips").hidden = !isAdmin;
 
   document.getElementById("leave-balances-title").textContent = isHR
     ? "Leave balances — all employees"
@@ -232,6 +243,7 @@ function renderBalanceRows(balances) {
 
 function renderMyBalances(balances) {
   balancesBody.innerHTML = renderBalanceRows(balances);
+  populateLeaveTypeOptions(balances);
 }
 
 function renderAllBalances(employeeBalances) {
@@ -370,12 +382,162 @@ exportBtn.addEventListener("click", async () => {
   }
 });
 
+async function loadEmployeeProfile() {
+  const profileContainer = document.getElementById("profile-body");
+  profileContainer.dataset.state = "loading";
+  profileContainer.innerHTML = `<p class="state-loading">Loading profile details…</p>`;
+
+  try {
+    const employee = await api.getMyProfile(); // was: await api.getUser (bug)
+
+    const managerDisplay = employee.manager_name
+      ? `<span class="badge manager-badge">${employee.manager_name}</span>`
+      : `<span class="text-muted">None (Executive / Root)</span>`;
+
+    const formattedType = (employee.employment_type || "full_time")
+      .replace("_", " ")
+      .toUpperCase();
+
+    profileContainer.innerHTML = `
+      <div class="profile-grid">
+        <div class="profile-item">
+          <span class="profile-label">Staff No</span>
+          <span class="profile-value">${employee.staff_no || "N/A"}</span>
+        </div>
+        <div class="profile-item">
+          <span class="profile-label">Job Title</span>
+          <span class="profile-value">${employee.job_title || "N/A"}</span>
+        </div>
+        <div class="profile-item">
+          <span class="profile-label">Department</span>
+          <span class="profile-value">${employee.department_name || "Unassigned"}</span>
+        </div>
+        <div class="profile-item">
+          <span class="profile-label">Reports To</span>
+          <span class="profile-value">${managerDisplay}</span>
+        </div>
+        <div class="profile-item">
+          <span class="profile-label">Employment Type</span>
+          <span class="profile-value badge">${formattedType}</span>
+        </div>
+        <div class="profile-item">
+          <span class="profile-label">Status</span>
+          <span class="profile-value status-${employee.employment_status || "unknown"}">${employee.employment_status || "N/A"}</span>
+        </div>
+      </div>
+    `;
+    profileContainer.removeAttribute("data-state");
+  } catch (err) {
+    profileContainer.dataset.state = "error";
+    profileContainer.innerHTML = `<p class="state-error">Failed to load profile details: ${err.message}</p>`;
+  }
+}
+
+// Org chart (everyone)
+const orgChartBody = document.querySelector("#section-org-chart .card-body");
+
+function renderOrgNode(node) {
+  const reportsHtml = node.direct_reports.length
+    ? node.direct_reports.map(renderOrgNode).join("")
+    : "";
+
+  return `
+    <div class="org-node">
+      <div class="org-node-name">${node.full_name}</div>
+      <div class="org-node-title">${node.job_title || "—"}${node.department_name ? ` · ${node.department_name}` : ""}</div>
+      ${reportsHtml}
+    </div>
+  `;
+}
+
+// ---- Leave request modal ----
+const leaveModalOverlay = document.getElementById("leave-modal-overlay");
+const leaveForm = document.getElementById("leave-request-form");
+const leaveTypeSelect = document.getElementById("leave-type-select");
+const leaveStartInput = document.getElementById("leave-start-date");
+const leaveEndInput = document.getElementById("leave-end-date");
+const leaveReasonInput = document.getElementById("leave-reason");
+const leaveFormError = document.getElementById("leave-form-error");
+const leaveSubmitBtn = document.getElementById("leave-submit-btn");
+const leaveCancelBtn = document.getElementById("leave-cancel-btn");
+const requestLeaveBtn = document.getElementById("request-leave-btn");
+
+function populateLeaveTypeOptions(balances) {
+  // Assumes each balance row includes leave_type_id — adjust key if your schema differs
+  leaveTypeSelect.innerHTML = balances
+    .map(
+      (b) => `<option value="${b.leave_type_id}">${b.leave_type_name}</option>`,
+    )
+    .join("");
+}
+
+function openLeaveModal() {
+  if (!leaveTypeSelect.options.length) {
+    alert("Leave types are still loading — try again in a moment.");
+    return;
+  }
+  leaveForm.reset();
+  leaveFormError.hidden = true;
+  leaveModalOverlay.hidden = false;
+  leaveStartInput.focus();
+}
+
+function closeLeaveModal() {
+  leaveModalOverlay.hidden = true;
+}
+
+requestLeaveBtn.addEventListener("click", openLeaveModal);
+leaveCancelBtn.addEventListener("click", closeLeaveModal);
+leaveModalOverlay.addEventListener("click", (e) => {
+  if (e.target === leaveModalOverlay) closeLeaveModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !leaveModalOverlay.hidden) closeLeaveModal();
+});
+
+leaveForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  leaveFormError.hidden = true;
+
+  const payload = {
+    leave_type_id: leaveTypeSelect.value,
+    start_date: leaveStartInput.value,
+    end_date: leaveEndInput.value,
+  };
+  const reason = leaveReasonInput.value.trim();
+  if (reason) payload.reason = reason;
+
+  if (new Date(payload.end_date) < new Date(payload.start_date)) {
+    leaveFormError.textContent = "End date can't be before the start date.";
+    leaveFormError.hidden = false;
+    return;
+  }
+
+  leaveSubmitBtn.disabled = true;
+  leaveSubmitBtn.textContent = "Submitting…";
+
+  try {
+    await api.submitLeaveRequest(payload);
+    closeLeaveModal();
+    await loadLeaveBalances();
+    if (isHR) await loadPendingApprovals();
+  } catch (err) {
+    leaveFormError.textContent =
+      err.message || "Could not submit request. Try again.";
+    leaveFormError.hidden = false;
+  } finally {
+    leaveSubmitBtn.disabled = false;
+    leaveSubmitBtn.textContent = "Submit request";
+  }
+});
+
 // init
 populatePeriodSelectors();
 applyRoleVisibility();
 loadWhosOut(getSelectedPeriod());
 loadLeaveBalances();
 loadPayslips(getSelectedPeriod());
+loadEmployeeProfile();
 
 if (isHR) {
   loadPendingApprovals();

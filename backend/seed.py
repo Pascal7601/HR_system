@@ -1,11 +1,9 @@
 import uuid
-from datetime import datetime, date
 from app import create_app
 from app.extensions import db
 from app.models import Role, User, Department, Employee, Leave
 
 app = create_app("dev")
-
 
 def get_or_create_role(name):
     role = Role.query.filter_by(name=name).first()
@@ -27,7 +25,9 @@ def get_or_create_leave_type(name, default_days):
 
 def seed():
     with app.app_context():
+        # Ensure database tables exist before querying or inserting data
         db.create_all()
+
         # --- Roles ---
         admin_role = get_or_create_role("admin")
         hr_role = get_or_create_role("hr_manager")
@@ -126,18 +126,18 @@ def seed():
 
         employees_data = [
             # Engineering Team (Reporting to Jane Miller)
-            {"staff_no": "EMP-0001", "first_name": "John", "last_name": "Doe", "email": "john.doe@vunohglobal.com", "title": "Senior Software Engineer", "salary": 5500, "type": "full_time", "dept": dept_map["Engineering"], "mgr_id": jane_id},
-            {"staff_no": "EMP-0002", "first_name": "Alice", "last_name": "Smith", "email": "alice.smith@vunohglobal.com", "title": "Frontend Developer", "salary": 4500, "type": "full_time", "dept": dept_map["Engineering"], "mgr_id": jane_id},
-            {"staff_no": "EMP-0003", "first_name": "Bob", "last_name": "Johnson", "email": "bob.johnson@vunohglobal.com", "title": "Backend Developer", "salary": 4800, "type": "full_time", "dept": dept_map["Engineering"], "mgr_id": jane_id},
-            {"staff_no": "EMP-0004", "first_name": "Charlie", "last_name": "Brown", "email": "charlie.brown@vunohglobal.com", "title": "DevOps Consultant", "salary": 5200, "type": "contract", "dept": dept_map["Engineering"], "mgr_id": jane_id},
-            {"staff_no": "EMP-0005", "first_name": "Diana", "last_name": "Prince", "email": "diana.prince@vunohglobal.com", "title": "QA Engineer", "salary": 4200, "type": "part_time", "dept": dept_map["Engineering"], "mgr_id": jane_id},
-            {"staff_no": "EMP-0006", "first_name": "Ethan", "last_name": "Hunt", "email": "ethan.hunt@vunohglobal.com", "title": "Fullstack Developer", "salary": 5000, "type": "full_time", "dept": dept_map["Engineering"], "mgr_id": jane_id},
+            {"staff_no": "EMP-0001", "first_name": "John", "last_name": "Doe", "email": "john.doe@vunohglobal.com", "title": "Senior Software Engineer", "salary": 5500, "dept": dept_map["Engineering"], "mgr_id": jane_id},
+            {"staff_no": "EMP-0002", "first_name": "Alice", "last_name": "Smith", "email": "alice.smith@vunohglobal.com", "title": "Frontend Developer", "salary": 4500, "dept": dept_map["Engineering"], "mgr_id": jane_id},
+            {"staff_no": "EMP-0003", "first_name": "Bob", "last_name": "Johnson", "email": "bob.johnson@vunohglobal.com", "title": "Backend Developer", "salary": 4800, "dept": dept_map["Engineering"], "mgr_id": jane_id},
+            {"staff_no": "EMP-0004", "first_name": "Charlie", "last_name": "Brown", "email": "charlie.brown@vunohglobal.com", "title": "DevOps Consultant", "salary": 5200, "dept": dept_map["Engineering"], "mgr_id": jane_id},
+            {"staff_no": "EMP-0005", "first_name": "Diana", "last_name": "Prince", "email": "diana.prince@vunohglobal.com", "title": "QA Engineer", "salary": 4200, "dept": dept_map["Engineering"], "mgr_id": jane_id},
+            {"staff_no": "EMP-0006", "first_name": "Ethan", "last_name": "Hunt", "email": "ethan.hunt@vunohglobal.com", "title": "Fullstack Developer", "salary": 5000, "dept": dept_map["Engineering"], "mgr_id": jane_id},
 
             # HR Team (Reporting to Sarah Connor)
-            {"staff_no": "EMP-0007", "first_name": "Fiona", "last_name": "Gallagher", "email": "fiona.gallagher@vunohglobal.com", "title": "HR Specialist", "salary": 3800, "type": "full_time", "dept": dept_map["Human Resources"], "mgr_id": sarah_id},
-            {"staff_no": "EMP-0008", "first_name": "George", "last_name": "Clark", "email": "george.clark@vunohglobal.com", "title": "Recruiter", "salary": 3600, "type": "full_time", "dept": dept_map["Human Resources"], "mgr_id": sarah_id},
-            {"staff_no": "EMP-0009", "first_name": "Hannah", "last_name": "Abbott", "email": "hannah.abbott@vunohglobal.com", "title": "Talent Consultant", "salary": 4100, "type": "contract", "dept": dept_map["Human Resources"], "mgr_id": sarah_id},
-            {"staff_no": "EMP-0010", "first_name": "Ian", "last_name": "Malcolm", "email": "ian.malcolm@vunohglobal.com", "title": "HR Operations Assistant", "salary": 3400, "type": "part_time", "dept": dept_map["Human Resources"], "mgr_id": sarah_id},
+            {"staff_no": "EMP-0007", "first_name": "Fiona", "last_name": "Gallagher", "email": "fiona.gallagher@vunohglobal.com", "title": "HR Specialist", "salary": 3800, "dept": dept_map["Human Resources"], "mgr_id": sarah_id},
+            {"staff_no": "EMP-0008", "first_name": "George", "last_name": "Clark", "email": "george.clark@vunohglobal.com", "title": "Recruiter", "salary": 3600, "dept": dept_map["Human Resources"], "mgr_id": sarah_id},
+            {"staff_no": "EMP-0009", "first_name": "Hannah", "last_name": "Abbott", "email": "hannah.abbott@vunohglobal.com", "title": "Talent Consultant", "salary": 4100, "dept": dept_map["Human Resources"], "mgr_id": sarah_id},
+            {"staff_no": "EMP-0010", "first_name": "Ian", "last_name": "Malcolm", "email": "ian.malcolm@vunohglobal.com", "title": "HR Operations Assistant", "salary": 3400, "dept": dept_map["Human Resources"], "mgr_id": sarah_id},
         ]
 
         for e in employees_data:

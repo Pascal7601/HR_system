@@ -18,18 +18,18 @@ import calendar
 #   slice of income within it, not the whole salary at one flat rate.
 #
 #   Monthly tax brackets (illustrative, not a real jurisdiction's rates):
-#     0    - 30000   -> 0%
-#     30000 - 100000   -> 10%
-#     100000+         -> 20%
+#     0    - 1000   -> 0%
+#     1000 - 3000   -> 10%
+#     3000+         -> 20%
 #
 # - Social security = flat 5% of gross pay, capped at 500.
 # - net_pay = gross_pay - tax - social_security
 # ---------------------------------------------------------------------------
 
 TAX_BRACKETS = [
-    (Decimal("0"), Decimal("30000"), Decimal("0.00")),
-    (Decimal("30000"), Decimal("100000"), Decimal("0.10")),
-    (Decimal("100000"), None, Decimal("0.20")),  # None = no upper bound
+    (Decimal("0"), Decimal("1000"), Decimal("0.00")),
+    (Decimal("1000"), Decimal("3000"), Decimal("0.10")),
+    (Decimal("3000"), None, Decimal("0.20")),  # None = no upper bound
 ]
 
 SOCIAL_SECURITY_RATE = Decimal("0.05")

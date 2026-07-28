@@ -123,6 +123,9 @@ const api = {
       body: JSON.stringify({ period_month: month, period_year: year }),
     });
   },
+  getMyProfile() {
+    return api.request("/employees/me");
+  },
 
   async downloadPayslipsExcel(month, year) {
     const token = localStorage.getItem("access_token");
@@ -145,5 +148,9 @@ const api = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
+  },
+
+  getOrgChart() {
+    return api.request("/employees/org-chart");
   },
 };
