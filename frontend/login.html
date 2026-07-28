@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HR System — Log in</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-card">
+      <h1>HR System</h1>
+      <form id="login-form">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username" />
+
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          required
+          autocomplete="current-password"
+        />
+
+        <button type="submit" id="login-btn">Log in</button>
+        <p id="login-error" class="error-text" hidden></p>
+      </form>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script>
+      const form = document.getElementById("login-form");
+      const errorEl = document.getElementById("login-error");
+      const btn = document.getElementById("login-btn");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.hidden = true;
+        btn.disabled = true;
+        btn.textContent = "Logging in...";
+
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        try {
+          const data = await api.login(email, password);
+          api.setSession(data);
+          window.location.href = "index.html";
+        } catch (err) {
+          errorEl.textContent = err.message || "Invalid email or password.";
+          errorEl.hidden = false;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Log in";
+        }
+      });
+    </script>
+  </body>
+</html>
